@@ -160,7 +160,7 @@ class Simulator:
         else:
             raise TypeError("source must be a Circuit, QASM string, or file path")
 
-        self.shots = shots
+        self.shots = int(input("how many shots: "))
         self.noise = noise or NoiseModel()
         self.rng = np.random.default_rng(seed)
 
