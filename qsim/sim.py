@@ -1,13 +1,3 @@
-"""Core state-vector simulator.
-
-State convention: little-endian (qubit 0 is the least significant bit).
-This matches OpenQASM / Qiskit so bitstrings like '011' mean
-qubit 2 = 0, qubit 1 = 1, qubit 0 = 1.
-
-Gates are applied by reshaping the 2^n state vector into an n-axis
-tensor and contracting against the gate matrix on the relevant axes.
-This runs in O(2^n) per gate rather than O(4^n) for the naive approach.
-"""
 from __future__ import annotations
 
 import numpy as np
@@ -20,10 +10,6 @@ from qsim.gates import (
 from qsim.noise import NoiseModel
 from qsim.parser import Circuit, Instruction, parse_qasm, parse_qasm_file
 
-
-# -----------------------------------------------------------------------------
-# Gate application via tensor contraction
-# -----------------------------------------------------------------------------
 
 def apply_single_qubit_gate(
     state: np.ndarray,
@@ -98,10 +84,6 @@ def apply_two_qubit_gate(
     return new_tensor.reshape(state.shape)
 
 
-# -----------------------------------------------------------------------------
-# Gate resolution
-# -----------------------------------------------------------------------------
-
 def _resolve_gate(instr: Instruction) -> tuple[np.ndarray, str]:
     """Return (matrix, kind) for a gate instruction.
 
@@ -119,26 +101,7 @@ def _resolve_gate(instr: Instruction) -> tuple[np.ndarray, str]:
     raise NotImplementedError(f"Unknown gate: {name!r}")
 
 
-# -----------------------------------------------------------------------------
-# Simulator
-# -----------------------------------------------------------------------------
-
 class Simulator:
-    """State-vector quantum circuit simulator.
-
-    Parameters
-    ----------
-    source : str or Circuit
-        Either QASM source code, a path to a .qasm file, or a pre-parsed Circuit.
-    shots : int
-        Number of measurement samples. If 0, run noise-free and return only
-        the final state vector (no measurements).
-    noise : NoiseModel, optional
-        Noise model applied after each gate. If None, simulate noise-free.
-    seed : int, optional
-        RNG seed for reproducibility.
-    """
-
     def __init__(
         self,
         source: str | Circuit,
@@ -149,7 +112,6 @@ class Simulator:
         if isinstance(source, Circuit):
             self.circuit = source
         elif isinstance(source, str):
-            # Heuristic: looks like a file path?
             if source.endswith(".qasm") or "\n" not in source and len(source) < 256:
                 try:
                     self.circuit = parse_qasm_file(source)
@@ -164,15 +126,9 @@ class Simulator:
         self.noise = noise or NoiseModel()
         self.rng = np.random.default_rng(seed)
 
-    # -------------------------------------------------------------------------
-    # Public API
-    # -------------------------------------------------------------------------
 
     def statevector(self) -> np.ndarray:
-        """Return the final state vector with no noise and no measurement.
 
-        Measurement instructions are ignored.
-        """
         n = self.circuit.num_qubits
         state = np.zeros(2**n, dtype=complex)
         state[0] = 1.0
@@ -185,37 +141,24 @@ class Simulator:
         return state
 
     def run(self) -> dict[str, int]:
-        """Run the circuit `shots` times and return measurement counts.
-
-        Returns
-        -------
-        counts : dict
-            Mapping from bitstring (little-endian, qubit 0 on the right) to
-            number of occurrences.
-        """
         n = self.circuit.num_qubits
         counts: dict[str, int] = {}
 
-        # If the circuit has no noise and no mid-circuit measurement, we can
-        # compute the final distribution once and sample from it.
         if self.noise.is_trivial():
             state = self.statevector()
-            # Identify measured qubits in circuit order.
             measured_qubits = [
                 i.qubits[0] for i in self.circuit.instructions if i.name == "measure"
             ]
             if not measured_qubits:
-                # No measurements: nothing to sample. Return empty counts.
                 return {}
             probs = np.abs(state) ** 2
-            probs = probs / probs.sum()  # numerical safety
+            probs = probs / probs.sum()
             outcomes = self.rng.choice(2**n, size=self.shots, p=probs)
             for outcome in outcomes:
                 bitstring = self._format_outcome(outcome, measured_qubits, n)
                 counts[bitstring] = counts.get(bitstring, 0) + 1
             return counts
 
-        # Noisy path: re-simulate each shot.
         for _ in range(self.shots):
             state = np.zeros(2**n, dtype=complex)
             state[0] = 1.0
@@ -234,11 +177,6 @@ class Simulator:
             counts[bitstring] = counts.get(bitstring, 0) + 1
 
         return counts
-
-    # -------------------------------------------------------------------------
-    # Internals
-    # -------------------------------------------------------------------------
-
     def _apply_instruction(
         self, state: np.ndarray, instr: Instruction, apply_noise: bool
     ) -> np.ndarray:
@@ -260,15 +198,7 @@ class Simulator:
 
     @staticmethod
     def _format_outcome(outcome: int, measured_qubits: list[int], n: int) -> str:
-        """Format a measurement outcome as a bitstring.
 
-        Only the measured qubits appear, in the order they were measured,
-        printed right-to-left (qubit measured last appears rightmost, matching
-        the typical QASM convention).
-        """
-        # Full n-bit representation.
-        full = format(outcome, f"0{n}b")  # MSB first, big-endian string
-        # full[-1 - q] is the bit for qubit q (little-endian).
+        full = format(outcome, f"0{n}b")
         bits = [full[-1 - q] for q in measured_qubits]
-        # Conventional display: qubit measured first on the left.
         return "".join(bits)

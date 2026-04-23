@@ -1,8 +1,3 @@
-"""Visualization tools for quantum simulation results.
-
-Provides histograms of measurement counts, Bloch sphere plots for
-single-qubit states, and amplitude / probability bar charts.
-"""
 from __future__ import annotations
 
 import numpy as np

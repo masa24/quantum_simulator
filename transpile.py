@@ -1,6 +1,3 @@
-"""Convert any IBM Quantum Experience QASM file into a QASM file
-that uses only gates our simulator supports."""
-
 from qiskit import QuantumCircuit, transpile
 import sys
 
@@ -13,7 +10,6 @@ BASIS_GATES = [
 
 
 def convert(input_path: str, output_path: str) -> None:
-    """Read a QASM file, transpile it to our basis gates, and save it."""
     qc = QuantumCircuit.from_qasm_file(input_path)
     print(f"Original circuit: {qc.count_ops()}")
 

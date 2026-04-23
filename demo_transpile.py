@@ -10,14 +10,14 @@ BASIS_GATES = [
     "cx", "cz", "swap",
 ]
 
-# --- Load and transpile ---
+# Load & transpile
 qc = QuantumCircuit.from_qasm_file("input/composer-2026-04-20_16-04.qasm")
 print("Original gates:", dict(qc.count_ops()))
 
 qc_basic = transpile(qc, basis_gates=BASIS_GATES, optimization_level=1)
 print("Transpiled gates:", dict(qc_basic.count_ops()))
 
-# --- Simulate ---
+# run simulator
 qasm_text = dumps(qc_basic)
 print(qasm_text)
 sim = Simulator(qasm_text, shots=1024, seed=1)

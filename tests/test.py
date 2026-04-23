@@ -34,4 +34,4 @@ for path in qasm_files:
     print(f"Counts: {counts}")
 
     plot_histogram(counts, title=name)
-    plt.show()   # close window to advance to next circuit
+plt.show()
