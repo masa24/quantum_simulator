@@ -1,7 +1,7 @@
 from qiskit import QuantumCircuit, transpile
 from qiskit.qasm2 import dumps
 from qsim import Simulator, NoiseModel
-from qsim.visualize import plot_histogram, plot_bloch_sphere
+from qsim.visualize import plot_histogram, plot_bloch_sphere, plot_amplitudes
 import matplotlib.pyplot as plt
 
 BASIS_GATES = [
@@ -36,6 +36,8 @@ plot_histogram(noisy_counts, title="My circuit (noisy)")
 
 sv = sim.statevector()
 plot_bloch_sphere(sv, title="Final state on Bloch sphere")
+
+plot_amplitudes(sv, title="Final state amplitudes")
 
 plt.show()
 
